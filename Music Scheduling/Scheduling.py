@@ -130,3 +130,7 @@ def rd_wo_replacement(los):
             los.remove(los[i])
             return x
 
+## How will I be able to fill the schedule while considering the dates that people cant play
+## Make a df that has dates as index and columns as peoples names
+## Have bool values for when they are available.
+## randomly take from the list of capacity but check if that date is open to that name
