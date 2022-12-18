@@ -23,6 +23,7 @@ survey_df.head()
 Leader_list = []
 Piano_list = []
 
+## The program multi_append(Str, num) produces a list with Str, n times.
 def multi_append(name, n):
     l = []
     for i in range(n):
@@ -69,14 +70,14 @@ def format(row):
 
 df['format'] = df.apply(lambda row: format(row), axis=1)
 
-if df['Start Date'][0].weekday() == 6:
-    df['format'][0] = None
+if df.loc[0,'Start Date'].weekday() == 6:
+    df.loc[0,'format'] = None
 
 for i in range(3, len(df) - 1):
-    if df['format'][i-2] != None:
-        df['format'][i] = None
-    elif df['format'][i-3] == 'Sit':
-        df['format'][i] = 'Stand'
+    if df.loc[i-2,'format'] != None:
+        df.loc[i,'format'] = None
+    elif df.loc[i-3,'format'] == 'Sit':
+        df.loc[i,'format'] = 'Stand'
     else:
         continue
 
@@ -134,3 +135,30 @@ def rd_wo_replacement(los):
 ## Make a df that has dates as index and columns as peoples names
 ## Have bool values for when they are available.
 ## randomly take from the list of capacity but check if that date is open to that name
+
+
+## The following code takes the input of dates that an individual is not available and outs put a
+## list in the proper format (YYY-MM-DD)
+
+## Convert(str) takes in a string and returns a list of the string
+##   broken up by a ','
+def Convert(str):
+    if type(str) == bool:
+        return []
+    if '-' in str:
+        li = (str.replace(' ', ''))
+        li = list(str.split(","))
+        return li
+    else:
+        return []
+
+dates_avail = pd.DataFrame(index=df['Start Date'],columns=(survey_df['Name'],))
+
+for index, row in survey_df.iterrows():
+    name = row['Name']
+    los = Convert(row['Dates off'])
+    for i in range(len(los)):
+        dates_avail.loc[los[i],name] = False
+
+## Still need to split the main dataframe and then populate it. This would work in a loop
+##   and you save each dataframe?
