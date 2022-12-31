@@ -4,6 +4,13 @@ from datetime import date
 import calendar
 from itertools import cycle, islice
 
+## Things needed to add:
+##    Need to add people who can both lead and play piano to both lists
+##    Need to make it so when you call the program, you input the source file,
+##      output folder, start date, etc.
+##    Need to figure out how to split into modules and read documents where people
+##      can change the books that they use in their specific churches
+
 
 
 address = 'C:/Users/Benjamin Piticaru/Downloads/January - April Leading survey.csv'
@@ -14,13 +21,16 @@ survey_df.columns = ['Name','email','phone','role','Zions Harp',
                     'Gospel Hymns','Hymns of Zion','Celebration Hymnal',
                     'Junior Hymnal', 'Camp Book','Dates off','Capacity','Groupchat']
 
+
 ## Changing Inputs from Yes/No and capacity to bool and 3,2,1 respecively
 survey_df.replace(('Yes', 'No'), (True, False), inplace=True)
-survey_df['Capacity'].replace(('regular (>3/month)', 'occasional (1-2/month)', 'reserve (0/month)'), (3, 2, 0), inplace=True)
+survey_df['Capacity'].replace(('regular (>3/month)', 'occasional (1-2/month)', 'reserve (0/month)'), (4, 1, 0), inplace=True)
+
 
 ## Creating the lists of Capacity per month
 Leader_list = []
 Piano_list = []
+
 
 ## The program multi_append(Str, num) produces a list with Str, n times.
 def multi_append(name, n):
@@ -46,6 +56,7 @@ begin_date = begin_date.replace('d',start_month)
 
 df = pd.DataFrame({'Start Date':pd.date_range(begin_date, periods=timespan),
                    'End Date':pd.date_range(begin_date, periods=timespan)})
+dates_avail = pd.DataFrame(index=df['Start Date'],columns=(survey_df['Name']))
 
 ## Filters out rows that are not wednesdays or Sundays
 for index, row in df.iterrows():
@@ -107,6 +118,7 @@ def end_time_of_day(row):
 
 df['Start Time'] = df.apply(lambda row: start_time_of_day(row), axis=1)
 df['End Time'] = df.apply(lambda row: end_time_of_day(row), axis=1)
+
 for index, row in df.iterrows():
     row['Start Date'] = str(row['Start Date'])[:10]
     row['End Date'] = str(row['End Date'])[:10]
@@ -125,39 +137,20 @@ if df['Start Date'][0].weekday() == 2:
 
 df['Subject'] = list(islice(cycle(book_list), len(df)))
 
-## Need to divide df into months to have stratified randomization
-
-## Need to make a dataframe that holds dates that people can't lead (df with peoples names as columns and dates as 
-#   indexes and binary values (yes no, true false))
-#       will have to figure out a way to change input dates to numeric dates
-
 ## The function below takes a list and returns a random value from the list without replacing it.
-def rd_wo_replacement(los):
-    if len(los) < 1:
-        return 
-    x = np.random.choice(los)
+def rm_from_lst(los,x):
     for i in range(len(los)):
         if (los[i] == x):
             los.remove(los[i])
-            return x
-
-## How will I be able to fill the schedule while considering the dates that people cant play
-## Make a df that has dates as index and columns as peoples names
-## Have bool values for when they are available.
-## randomly take from the list of capacity but check if that date is open to that name
-
-
-## The following code takes the input of dates that an individual is not available and outs put a
-## list in the proper format (YYY-MM-DD)
 
 ## Convert(str) takes in a string and returns a list of the string
 ##   broken up by a ','
-def Convert(str):
-    if type(str) == bool:
+def Convert(s):
+    if type(s) == float:
         return []
-    if '-' in str:
-        li = (str.replace(' ', ''))
-        li = list(str.split(","))
+    if '-' in s:
+        li = (s.replace(' ', ''))
+        li = list(s.split(","))
         return li
     else:
         return []
@@ -168,7 +161,7 @@ books_df.index = survey_df['Name']
 books_df.columns = ['Zions Harp','Gospel Hymns','Hymns of Zion','Celebration Hymnal','Junior Hymnal','Camp Book']
 
 ## The following code creates and formats the dates that people are available for.
-dates_avail = pd.DataFrame(index=df['Start Date'],columns=(survey_df['Name']))
+##dates_avail = pd.DataFrame(index=df['Start Date'],columns=(survey_df['Name']))
 dates_avail = dates_avail.applymap(lambda x: True)
 
 for index, row in survey_df.iterrows():
@@ -187,24 +180,48 @@ sched_2 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-02']
 sched_3 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-03']
 sched_4 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-04']
 
-lol = Leader_list
-lop = Piano_list
+## need to replace from list if name is not chosen.
 ## Populates leaders
-for index, row in sched_1.iterrows():
-    leader = np.random.choice(lol)
-    pianist = np.random.choice(lop)
-    while (books_df.loc[leader,row['Subject']] != True) & (books_df.loc[leader,row['Subject']] == False):
-        leader = np.random.choice(lol)
-    while (books_df.loc[pianist,row['Subject']] != True) & (books_df.loc[pianist,row['Subject']] == False):
-        pianist = np.random.choice(lol)
-    sched_1.loc[row['Leader'],'Leader'] = leader
-    sched_1.loc[row['Pianist'],'Pianist'] = pianist
 
-sched_1.head()
+def fill_schedule(df):
+    lol = Leader_list.copy()
+    lop = Piano_list.copy()
+    Old_leader = ''
+    Old_pianist = ''
+    for index, row in df.iterrows():
+        leader = np.random.choice(lol)
+        pianist = np.random.choice(lop)
+        while ((books_df.loc[leader,row['Subject']] != True) | 
+        (dates_avail.loc[row['Start Date'],leader] == False) | (Old_leader == leader)):
+            leader = np.random.choice(lol)
+        while ((books_df.loc[pianist,row['Subject']] != True) | (
+            dates_avail.loc[row['Start Date'],pianist] == False) | (Old_pianist == pianist)):
+            pianist = np.random.choice(lop)
+        lol.remove(leader)
+        lop.remove(pianist)
+        df.loc[row['Leader'],'Leader'] = leader
+        df.loc[row['Pianist'],'Pianist'] = pianist
+        Old_leader = leader
+        Old_pianist = pianist
+
+fill_schedule(sched_1)
+fill_schedule(sched_2)
+fill_schedule(sched_3)
+fill_schedule(sched_4)
 
 ## The code below converts the dataframes back to a single schedule
 sched_1 = sched_1.append(sched_2,ignore_index=True)
 sched_1 = sched_1.append(sched_3,ignore_index=True)
 sched_1 = sched_1.append(sched_4,ignore_index=True)
 
+final_df = sched_1.filter(['Subject','Start Date','End Date', 'Start Time','End Time'],axis=1)
 
+
+## The following code writes the description column for the final df.
+def write_description(row):
+    string = 'Leader: {leader} | Pianist: {pianist} \n Format: {format}'.format(leader=row['Leader'],pianist=row['Pianist'],format=row['format'])
+    return string
+
+final_df['Description'] = sched_1.apply(lambda row: write_description(row), axis=1)
+
+final_df.to_csv('Music_Schedule.csv')
