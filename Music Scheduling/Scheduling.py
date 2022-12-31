@@ -11,13 +11,12 @@ survey_df = pd.read_csv(address)
 survey_df = survey_df.drop('Timestamp', axis=1)
 
 survey_df.columns = ['Name','email','phone','role','Zions Harp',
-                    'Gospel Hymns','Hymns Zion','Celebration Book',
+                    'Gospel Hymns','Hymns of Zion','Celebration Hymnal',
                     'Junior Hymnal', 'Camp Book','Dates off','Capacity','Groupchat']
 
 ## Changing Inputs from Yes/No and capacity to bool and 3,2,1 respecively
 survey_df.replace(('Yes', 'No'), (True, False), inplace=True)
 survey_df['Capacity'].replace(('regular (>3/month)', 'occasional (1-2/month)', 'reserve (0/month)'), (3, 2, 0), inplace=True)
-survey_df.head()
 
 ## Creating the lists of Capacity per month
 Leader_list = []
@@ -30,15 +29,21 @@ def multi_append(name, n):
         l.append(name)
     return l
 
+## The program below creates a list of leaders/piano names * the number of times they are able to
+##   play a month
 for i in range(len(survey_df)):
-    if survey_df['role'][i] == 'Leader':
-        Leader_list.extend(multi_append(survey_df['Name'][i], survey_df['Capacity'][i]))
+    if survey_df.loc[i,'role'] == 'Leader':
+        Leader_list.extend(multi_append(survey_df.loc[i,'Name'], survey_df.loc[i,'Capacity']))
     else:
-        Piano_list.extend(multi_append(survey_df['Name'][i], survey_df['Capacity'][i]))
+        Piano_list.extend(multi_append(survey_df.loc[i,'Name'], survey_df.loc[i,'Capacity']))
 
-## Inputs the dates from January to April
+## Inputs the dates for 4 months, starting with start_month. 
+##   Change this out for the input option month.
 timespan = 120
-begin_date = '2023-01-01'
+start_month = '1'
+begin_date = '2023-0d-01'
+begin_date = begin_date.replace('d',start_month)
+
 df = pd.DataFrame({'Start Date':pd.date_range(begin_date, periods=timespan),
                    'End Date':pd.date_range(begin_date, periods=timespan)})
 
@@ -102,6 +107,9 @@ def end_time_of_day(row):
 
 df['Start Time'] = df.apply(lambda row: start_time_of_day(row), axis=1)
 df['End Time'] = df.apply(lambda row: end_time_of_day(row), axis=1)
+for index, row in df.iterrows():
+    row['Start Date'] = str(row['Start Date'])[:10]
+    row['End Date'] = str(row['End Date'])[:10]
 
 ## Adding Book used
 book_list = ['Zions Harp','Celebration Hymnal',
@@ -125,6 +133,8 @@ df['Subject'] = list(islice(cycle(book_list), len(df)))
 
 ## The function below takes a list and returns a random value from the list without replacing it.
 def rd_wo_replacement(los):
+    if len(los) < 1:
+        return 
     x = np.random.choice(los)
     for i in range(len(los)):
         if (los[i] == x):
@@ -152,7 +162,14 @@ def Convert(str):
     else:
         return []
 
-dates_avail = pd.DataFrame(index=df['Start Date'],columns=(survey_df['Name'],))
+books_df = survey_df.filter(['Zions Harp','Gospel Hymns','Hymns of Zion',
+                            'Celebration Hymnal','Junior Hymnal', 'Camp Book'], axis=1)
+books_df.index = survey_df['Name']
+books_df.columns = ['Zions Harp','Gospel Hymns','Hymns of Zion','Celebration Hymnal','Junior Hymnal','Camp Book']
+
+## The following code creates and formats the dates that people are available for.
+dates_avail = pd.DataFrame(index=df['Start Date'],columns=(survey_df['Name']))
+dates_avail = dates_avail.applymap(lambda x: True)
 
 for index, row in survey_df.iterrows():
     name = row['Name']
@@ -160,5 +177,34 @@ for index, row in survey_df.iterrows():
     for i in range(len(los)):
         dates_avail.loc[los[i],name] = False
 
-## Still need to split the main dataframe and then populate it. This would work in a loop
-##   and you save each dataframe?
+## Creating the Leader and Pianist columns
+df['Leader'] = list(range(len(df)))
+df['Pianist'] = list(range(len(df)))
+
+## The code below splits the main schedule into 4 schedules for each month
+sched_1 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-01']
+sched_2 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-02']
+sched_3 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-03']
+sched_4 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-04']
+
+lol = Leader_list
+lop = Piano_list
+## Populates leaders
+for index, row in sched_1.iterrows():
+    leader = np.random.choice(lol)
+    pianist = np.random.choice(lop)
+    while (books_df.loc[leader,row['Subject']] != True) & (books_df.loc[leader,row['Subject']] == False):
+        leader = np.random.choice(lol)
+    while (books_df.loc[pianist,row['Subject']] != True) & (books_df.loc[pianist,row['Subject']] == False):
+        pianist = np.random.choice(lol)
+    sched_1.loc[row['Leader'],'Leader'] = leader
+    sched_1.loc[row['Pianist'],'Pianist'] = pianist
+
+sched_1.head()
+
+## The code below converts the dataframes back to a single schedule
+sched_1 = sched_1.append(sched_2,ignore_index=True)
+sched_1 = sched_1.append(sched_3,ignore_index=True)
+sched_1 = sched_1.append(sched_4,ignore_index=True)
+
+
