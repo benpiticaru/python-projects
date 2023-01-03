@@ -11,8 +11,6 @@ from itertools import cycle, islice
 ##    Need to figure out how to split into modules and read documents where people
 ##      can change the books that they use in their specific churches
 
-
-
 address = 'C:/Users/Benjamin Piticaru/Downloads/January - April Leading survey.csv'
 survey_df = pd.read_csv(address)
 survey_df = survey_df.drop('Timestamp', axis=1)
@@ -24,13 +22,10 @@ survey_df.columns = ['Name','email','phone','role','Zions Harp',
 
 ## Changing Inputs from Yes/No and capacity to bool and 3,2,1 respecively
 survey_df.replace(('Yes', 'No'), (True, False), inplace=True)
-survey_df['Capacity'].replace(('regular (>3/month)', 'occasional (1-2/month)', 'reserve (0/month)'), (4, 1, 0), inplace=True)
-
 
 ## Creating the lists of Capacity per month
 Leader_list = []
 Piano_list = []
-
 
 ## The program multi_append(Str, num) produces a list with Str, n times.
 def multi_append(name, n):
@@ -41,11 +36,12 @@ def multi_append(name, n):
 
 ## The program below creates a list of leaders/piano names * the number of times they are able to
 ##   play a month
-for i in range(len(survey_df)):
-    if survey_df.loc[i,'role'] == 'Leader':
-        Leader_list.extend(multi_append(survey_df.loc[i,'Name'], survey_df.loc[i,'Capacity']))
+
+for index, row in survey_df.iterrows():
+    if row['role'] == 'Leader':
+        Leader_list.extend(multi_append(row['Name'], row['Capacity']))
     else:
-        Piano_list.extend(multi_append(survey_df.loc[i,'Name'], survey_df.loc[i,'Capacity']))
+        Piano_list.extend(multi_append(row['Name'], row['Capacity']))
 
 ## Inputs the dates for 4 months, starting with start_month. 
 ##   Change this out for the input option month.
