@@ -10,6 +10,7 @@ from itertools import cycle, islice
 ##      output folder, start date, etc.
 ##    Need to figure out how to split into modules and read documents where people
 ##      can change the books that they use in their specific churches
+##    Add a question to the google form if people can only lead sundays or wednesdays
 
 address = 'C:/Users/Benjamin Piticaru/Downloads/January - April Leading survey.csv'
 survey_df = pd.read_csv(address)
@@ -179,26 +180,33 @@ sched_4 = df[df['Start Date'].dt.strftime('%Y-%m') == '2023-04']
 ## need to replace from list if name is not chosen.
 ## Populates leaders
 
+def remove_third(los):
+    if len(los) > 3:
+        los = los[1:]
+    return los
+
 def fill_schedule(df):
     lol = Leader_list.copy()
     lop = Piano_list.copy()
-    Old_leader = ''
-    Old_pianist = ''
+    Old_leader = []
+    Old_pianist = []
     for index, row in df.iterrows():
         leader = np.random.choice(lol)
         pianist = np.random.choice(lop)
         while ((books_df.loc[leader,row['Subject']] != True) | 
-        (dates_avail.loc[row['Start Date'],leader] == False) | (Old_leader == leader)):
+        (dates_avail.loc[row['Start Date'],leader] == False) | (leader in Old_leader)):
             leader = np.random.choice(lol)
         while ((books_df.loc[pianist,row['Subject']] != True) | (
-            dates_avail.loc[row['Start Date'],pianist] == False) | (Old_pianist == pianist)):
+            dates_avail.loc[row['Start Date'],pianist] == False) | (pianist in Old_pianist)):
             pianist = np.random.choice(lop)
         lol.remove(leader)
         lop.remove(pianist)
+        Old_leader.append(leader)
+        Old_pianist.append(pianist)
+        Old_leader = remove_third(Old_leader)
+        Old_pianist = remove_third(Old_pianist)
         df.loc[row['Leader'],'Leader'] = leader
         df.loc[row['Pianist'],'Pianist'] = pianist
-        Old_leader = leader
-        Old_pianist = pianist
 
 fill_schedule(sched_1)
 fill_schedule(sched_2)
@@ -221,3 +229,30 @@ def write_description(row):
 final_df['Description'] = sched_1.apply(lambda row: write_description(row), axis=1)
 
 final_df.to_csv('Music_Schedule.csv')
+
+## make_pdf(df) takes the shedule dataframe and outputs a new dataframe that is the pdf version of the schedule.
+def make_pdf(df):
+    new_df = pd.DataFrame(np.arange(216).reshape(18,12))
+    i = 0
+    for index, row in df.iterrows():
+        if row['Start Date'].weekday() == 6:
+            if row['Start Time'] == '4:40:00 PM':
+                new_df.iloc[i,1] = row['Leader']
+                new_df.iloc[i,2] = row['Pianist']
+            else:
+                new_df.iloc[i,0] = str(row['Start Date'])[:10]
+                new_df.iloc[i,3] = row['Leader']
+                new_df.iloc[i,4] = row['Pianist']
+                new_df.iloc[i,5] = row['format']
+                new_df.iloc[i,6] = row['Subject']
+        else:
+            new_df.iloc[i,8] = str(row['Start Date'])[:10]
+            new_df.iloc[i,9] = row['Leader']
+            new_df.iloc[i,10] = row['Pianist']
+            new_df.iloc[i,11] = row['Subject']
+            i += 1
+    return new_df
+
+pdf = make_pdf(sched_1)
+
+pdf.to_csv('Music_scheduale_pdf_version.csv')
