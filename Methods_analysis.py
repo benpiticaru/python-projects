@@ -5,6 +5,7 @@ import subprocess as sp
 import argparse
 from read_analysis import find_guppy_location,basecaller,file_combine,run_analysis,format_read_df,format_poly_df,make_read_plot,make_read_hist,make_poly_plot
 
+
 ## The following arguments are the location of the fast5 files and sample name for one sample, followed by
 ##   the fast5 files and sample name for sample 2.
 parser = argparse.ArgumentParser()
