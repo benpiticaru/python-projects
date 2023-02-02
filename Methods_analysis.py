@@ -25,7 +25,7 @@ minimap2='/home/ben/Applications/minimap2/minimap2'
 
 ## add a condition for if guppy_outdir is empty, then run guppy and create a folder and run guppy.
 
-## making the output folders
+## making the output folders.
 sp.run('mkdir {a}'.format(a=args.experiment_name),shell=True)
 os.chdir('{a}'.format(a=args.experiment_name))
 ## Turns the information inputed into a dataframe
