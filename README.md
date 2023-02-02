@@ -1,1 +1,1 @@
-# python_scripts
+# Poly(A) Selection Analysis code
